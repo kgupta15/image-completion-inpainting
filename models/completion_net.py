@@ -3,6 +3,7 @@
 import torch
 import torch.nn as nn
 
+# in_channels = 4; concat(input_image, mask)
 class CompletionNetwork(nn.Module):
     """
     Completion Network
@@ -14,6 +15,7 @@ class CompletionNetwork(nn.Module):
 
         self.relu_op = nn.ReLU()
         self.sig_op = nn.Sigmoid()
+
         # 64 channels
         self.conv1 = nn.Conv2d(in_channels=3, out_channels=64, kernel_size=(5,5), stride=(1,1), dilation=1, bias=False)
 
