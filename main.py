@@ -38,16 +38,31 @@ def main(args):
         dist.init_process_group(backend=config.distributed['dist_backend'], init_method=config.distributed['dist_url'],\
                                 world_size=config.distributed['world_size'])
 
-    # creating model instance
+    # creating models' instance
     completion_net = DilatedCompletionNetwork(config)
+    local_disc = LocalDiscriminator(config)
+    global_disc = GlobalDiscriminator(config)
+    concat_layer = Concatenator(config)
+    
     # plotting interactively
     plt.ion()
 
     if args.distributed:
-        model.to(device)
-        model = nn.parallel.DistributedDataParallel(model)
+        completion_net.to(device)
+        local_disc.to(device)
+        global_disc.to(device)
+        concat_layer.to(device)
+        completion_net = nn.parallel.DistributedDataParallel(completion_net)
+        local_disc = nn.parallel.DistributedDataParallel(local_disc)
+        global_disc = nn.parallel.DistributedDataParallel(global_disc)
+        concat_layer = nn.parallel.DistributedDataParallel(concat_layer)
+
     elif args.gpu:
-        model = nn.DataParallel(model).to(device)
+        completion_net = nn.DataParallel(completion_net).to(device)
+        local_disc = nn.DataParallel(local_disc).to(device)
+        global_disc = nn.DataParallel(global_disc).to(device)
+        concat_layer = nn.DataParallel(concat_layer).to(device)
+
     else: return
 
     # Data Loading
@@ -74,8 +89,8 @@ def main(args):
         num_workers=config.data['workers'], pin_memory=config.data['pin_memory'])
 
     # Training and Evaluation
-    trainer = Trainer('cnn', config, train_loader, model)
-    evaluator = Evaluator('cnn', config, val_loader, model)
+    trainer = Trainer('cnn', config, train_loader, (completion_net, local_disc, global_disc, concat_layer))
+    evaluator = Evaluator('cnn', config, val_loader, (completion_net, local_disc, global_disc, concat_layer))
 
     # define loss function (criterion) and optimizer
     criterion = nn.CrossEntropyLoss().to(device)

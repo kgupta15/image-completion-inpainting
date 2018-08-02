@@ -1,2 +1,2 @@
-from .completion_net import *
-from .descriminator import *
+from .generator import *
+from .discriminator import *

@@ -3,13 +3,14 @@
 import torch
 import torch.nn as nn
 
-class LocalDescriminator(nn.Module):
+class LocalDiscriminator(nn.Module):
     """
-    Local Descriminator
+    Local Discriminator
     ===================
     """
-    def __init__(self):
-        super(LocalDescriminator, self).__init__()
+    def __init__(self, config):
+        super(LocalDiscriminator, self).__init__()
+        self.config = config
         self.relu_op = nn.ReLU()
 
         self.conv1 = nn.Conv2d(in_channels=3, out_channels=64, kernel_size=(5,5), stride=(2,2), bias=False)
@@ -52,13 +53,14 @@ class LocalDescriminator(nn.Module):
         return out
 
 
-class GlobalDescriminator(nn.Module):
+class GlobalDiscriminator(nn.Module):
     """
-    Global Descriminator
+    Global Discriminator
     ====================
     """
-    def __init__(self):
-        super(GlobalDescriminator, self).__init__()
+    def __init__(self, config):
+        super(GlobalDiscriminator, self).__init__()
+        self.config = config
         self.relu_op = nn.ReLU()
 
         self.conv1 = nn.Conv2d(in_channels=3, out_channels=64, kernel_size=(5,5), stride=(2,2), bias=False)
@@ -114,8 +116,8 @@ class Concatenator(nn.Module):
         self.config = config
         self.fc = nn.Linear(in_features=2048, out_features=1, bias=True)
 
-    def forward(self, local_des, global_des):
-        out = torch.cat((local_des, global_des), 1)
+    def forward(self, local_dis, global_dis):
+        out = torch.cat((local_dis, global_dis), 1)
         out = self.fc(out)
 
         return out

@@ -13,7 +13,7 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 class Evaluator(object):
     """docstring for Evaluate."""
-    def __init__(self, title=None, config=None, data=None, model=None):
+    def __init__(self, title=None, config=None, data=None, models=None):
         super(Evaluator, self).__init__()
         self.title = title
         self.config = config
@@ -22,7 +22,7 @@ class Evaluator(object):
         self.eval_loss = 0
 
         # parameters / model
-        self.model = model
+        self.completion_net, self.local_disc, self.global_disc, self.concat_layer = models
 
         self.criterion = None
         # visualization config

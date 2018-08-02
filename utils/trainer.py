@@ -15,7 +15,7 @@ from .visualizer import Visualizer
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 class Trainer(object):
-    def __init__(self, title=None, config=None, data=None, model=None):
+    def __init__(self, title=None, config=None, data=None, models=None):
         super(Trainer, self).__init__()
         self.title = title
         self.config = config
@@ -31,12 +31,15 @@ class Trainer(object):
         self.train_loss = 0
 
         # parameters / model
-        self.model = model
+        self.completion_net, self.local_disc, self.global_disc, self.concat_layer = models
         self.trainable_parameters = 0
         self.completed_epochs = 0
         self.lr = self.config.hyperparameters['lr']
 
-        self.criterion = None
+        self.cn_criterion = None
+        self.ld_criterion = None
+        self.gd_criterion = None
+        self.cl_criterion = None
         self.optimizer = None
         self.curr_lr = 0
 
@@ -61,7 +64,20 @@ class Trainer(object):
         return True
 
     def setCriterion(self, criterion):
-        self.criterion = criterion
+        self.cn_criterion = criterion
+        self.ld_criterion = criterion
+        self.gd_criterion = criterion
+        self.cl_criterion = criterion
+        return True
+
+    def setCNCriterion(self, criterion):
+        self.cn_criterion = criterion
+        return True
+
+    def setDiscCriterion(self, criterion):
+        self.ld_criterion = criterion
+        self.gd_criterion = criterion
+        self.cl_criterion = criterion
         return True
 
     def setOptimizer(self, optimizer):
@@ -122,23 +138,30 @@ class Trainer(object):
             raise ValueError('[-] No model has been provided')
         if self.config is None:
             raise ValueError('[-] No Configurations present')
-        if self.criterion is None:
-            raise ValueError('[-] Loss Function hasn\'t been mentioned for the model')
+        if self.cn_criterion is None or self.ld_criterion is None or self.gd_criterion is None or self.cl_criterion is None:
+            raise ValueError('[-] Loss Function hasn\'t been mentioned for the models')
         if self.optimizer is None:
             raise ValueError('[-] Optimizer hasn\'t been mentioned for the model')
         if self.data is None:
             raise ValueError('[-] No Data available to train on')
 
         self.train_loss = 0
+        
         # training mode
-        self.model.train()
-        for batch_idx, (images, labels) in enumerate(self.data):
+        self.completion_net.train()
+        self.local_disc.train()
+        self.global_disc.train()
+        self.concat_layer.train()
+
+        for batch_idx, (images, masks) in enumerate(self.data):
             if self.config.gpu:
                 images = images.to(device)
-                labels = labels.to(device)
+                masks = masks.to(device)
 
-            output = self.model(images)
-            loss = self.criterion(output, labels)
+            input_4ch = torch.cat([images * (1-masks), masks], dim=1)
+
+            cn_output = self.completion_net(input_4ch)
+            cn_loss = self.cn_criterion(cn_output, masks)
 
             self.optimizer.zero_grad()
             loss.backward()
