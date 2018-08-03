@@ -104,3 +104,6 @@ venv.bak/
 .mypy_cache/
 structure.sh
 .vscode
+
+data/*
+!data/download.sh
