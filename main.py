@@ -57,7 +57,7 @@ def main(args):
         global_disc = nn.parallel.DistributedDataParallel(global_disc)
         concat_layer = nn.parallel.DistributedDataParallel(concat_layer)
 
-    elif args.gpu:
+    elif config.gpu:
         completion_net = nn.DataParallel(completion_net).to(device)
         local_disc = nn.DataParallel(local_disc).to(device)
         global_disc = nn.DataParallel(global_disc).to(device)
@@ -66,12 +66,11 @@ def main(args):
     else: return
 
     # Data Loading
-    train_dataset = torchvision.datasets.MNIST(root='../../data/',
-                                           train=True,
-                                           transform=transforms.ToTensor(),
-                                           download=True)
+    train_dataset = CelebDataset(args=config.data,
+                                train=True,
+                                transform=transforms.ToTensor())
 
-    test_dataset = torchvision.datasets.MNIST(root='../../data/',
+    test_dataset = CelebDataset(args=config.data,
                                               train=False,
                                               transform=transforms.ToTensor())
 
@@ -89,16 +88,21 @@ def main(args):
         num_workers=config.data['workers'], pin_memory=config.data['pin_memory'])
 
     # Training and Evaluation
-    trainer = Trainer('cnn', config, train_loader, (completion_net, local_disc, global_disc, concat_layer))
-    evaluator = Evaluator('cnn', config, val_loader, (completion_net, local_disc, global_disc, concat_layer))
+    trainer = Trainer('Image Inpainting', config, train_loader, (completion_net, local_disc, global_disc, concat_layer))
+    evaluator = Evaluator('Image Inpainting Eval', config, val_loader, (completion_net, local_disc, global_disc, concat_layer))
 
     # define loss function (criterion) and optimizer
     criterion = nn.CrossEntropyLoss().to(device)
-    optimizer = torch.optim.Adam(model.parameters(), config.hyperparameters['lr'])
-                               # weight_decay=config.hyperparameters['weight_decay'])
+    cn_optimizer = torch.optim.Adam(completion_net.parameters(), config.hyperparameters['cn_lr'])
+    ld_optimizer = torch.optim.Adam(local_disc.parameters(), config.hyperparameters['ld_lr'])
+    gd_optimizer = torch.optim.Adam(global_disc.parameters(), config.hyperparameters['gd_lr'])
+    cl_optimizer = torch.optim.Adam(concat_layer.parameters(), config.hyperparameters['cl_lr'])
 
     trainer.setCriterion(criterion)
-    trainer.setOptimizer(optimizer)
+    trainer.setCNOptimizer(cn_optimizer)
+    trainer.setLDOptimizer(ld_optimizer)
+    trainer.setGDOptimizer(gd_optimizer)
+    trainer.setCLOptimizer(cl_optimizer)
     evaluator.setCriterion(criterion)
 
     # optionally resume from a checkpoint
@@ -110,6 +114,7 @@ def main(args):
     cudnn.benchmark = True
 
     best_prec1 = 0
+    print('Total Epochs to be run are :{}'.format(config.hyperparameters['num_epochs']))
     for epoch in range(config.hyperparameters['num_epochs']):
         if args.distributed:
             train_sampler.set_epoch(epoch)
