@@ -8,6 +8,7 @@ from tensorboard_logger import configure, log_value
 import numpy as np
 import torch
 import torch.nn as nn
+import cv2
 
 from .meter import AverageMeter
 from .visualizer import Visualizer
@@ -34,13 +35,16 @@ class Trainer(object):
         self.completion_net, self.local_disc, self.global_disc, self.concat_layer = models
         self.trainable_parameters = 0
         self.completed_epochs = 0
-        self.lr = self.config.hyperparameters['lr']
+        self.cn_lr = self.config.hyperparameters['cn_lr']
 
         self.cn_criterion = None
+        self.cn_optimizer = None
         self.ld_criterion = None
+        self.ld_optimizer = None
         self.gd_criterion = None
+        self.gd_optimizer = None
         self.cl_criterion = None
-        self.optimizer = None
+        self.cl_optimizer = None
         self.curr_lr = 0
 
         # visualization config
@@ -81,7 +85,32 @@ class Trainer(object):
         return True
 
     def setOptimizer(self, optimizer):
-        self.optimizer = optimizer
+        self.cn_optimizer = optimizer
+        self.ld_optimizer = optimizer
+        self.gd_optimizer = optimizer
+        self.concat_layer = optimizer
+        return True
+
+    def setCNOptimizer(self, optimizer):
+        self.cn_optimizer = optimizer
+        return True
+
+    def setDiscOptimizer(self, optimizer):
+        self.ld_optimizer = optimizer
+        self.gd_optimizer = optimizer
+        self.cl_optimizer = optimizer
+        return True
+
+    def setLDOptimizer(self, optimizer):
+        self.ld_optimizer = optimizer
+        return True
+
+    def setGDOptimizer(self, optimizer):
+        self.gd_optimizer = optimizer
+        return True
+
+    def setCLOptimizer(self, optimizer):
+        self.cl_optimizer = optimizer
         return True
 
     def count_parameters(self):
@@ -129,19 +158,24 @@ class Trainer(object):
 
     def adjust_learning_rate(self, epoch):
         """Sets the learning rate to the initial LR decayed by 10 every 30 epochs"""
-        self.curr_lr = self.config.hyperparameters['lr'] * (self.config.hyperparameters['lr_decay'] ** (epoch // self.config.hyperparameters['lr_decay_epoch']))
-        for param_group in self.optimizer.param_groups:
-            param_group['lr'] = self.curr_lr
+        self.curr_cn_lr = self.config.hyperparameters['cn_lr'] * (self.config.hyperparameters['lr_decay'] ** (epoch // self.config.hyperparameters['lr_decay_epoch']))
+        for param_group in self.cn_optimizer.param_groups:
+            param_group['cn_lr'] = self.curr_lr
+
+    # def croppedImage(self):
+        # i,j = np.where(mask)
+        # indices = np.meshgrid(np.arange(min(i), max(i)+1), np.arange(min(j), max(j)+1), indexing='ij')
+        # sub_mask = mask[indices]
 
     def train(self, epoch):
-        if self.model is None:
-            raise ValueError('[-] No model has been provided')
+        if self.completion_net is None and self.local_disc is None and self.global_disc is None and self.concat_layer is None:
+            raise ValueError('[-] Models have not been provided')
         if self.config is None:
             raise ValueError('[-] No Configurations present')
         if self.cn_criterion is None or self.ld_criterion is None or self.gd_criterion is None or self.cl_criterion is None:
             raise ValueError('[-] Loss Function hasn\'t been mentioned for the models')
-        if self.optimizer is None:
-            raise ValueError('[-] Optimizer hasn\'t been mentioned for the model')
+        if self.cn_optimizer is None or self.ld_optimizer is None or self.gd_optimizer is None or self.cl_optimizer is None:
+            raise ValueError('[-] Optimizer hasn\'t been mentioned for the models')
         if self.data is None:
             raise ValueError('[-] No Data available to train on')
 
@@ -153,18 +187,29 @@ class Trainer(object):
         self.global_disc.train()
         self.concat_layer.train()
 
-        for batch_idx, (images, masks) in enumerate(self.data):
-            if self.config.gpu:
-                images = images.to(device)
-                masks = masks.to(device)
+        for batch_idx, data in enumerate(self.data):
+            faces, masks, bboxes = data
 
-            input_4ch = torch.cat([images * (1-masks), masks], dim=1)
+            input_4ch = torch.cat([faces * (1-masks), masks], dim=1)
+            assert input_4ch.shape == (faces.shape[0], faces.shape[1] + masks.shape[1], faces.shape[2], faces.shape[3])
+            
+            if self.config.gpu:
+                faces = faces.to(device)
+                masks = masks.to(device)
+                input_4ch = input_4ch.to(device)
 
             cn_output = self.completion_net(input_4ch)
-            cn_loss = self.cn_criterion(cn_output, masks)
+            cn_loss = self.cn_criterion(cn_output, faces)
+            cn_loss.update(cn_loss.data[0], )
 
-            self.optimizer.zero_grad()
-            loss.backward()
+            self.cn_optimizer.zero_grad()
+            
+
+
+
+
+
+            cn_loss.backward()
             self.train_loss = loss.item()
             self.optimizer.step()
 
@@ -172,7 +217,7 @@ class Trainer(object):
             if batch_idx % self.config.logs['log_interval'] == 0:
                 print(
                     'Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}\tlr: {:.6f}'.format(
-                    epoch+1, batch_idx * len(images), len(self.data.dataset),
+                    epoch+1, batch_idx * len(faces), len(self.data.dataset),
                     100. * batch_idx / len(self.data),
                     loss.item() / len(self.data), self.curr_lr)
                 )

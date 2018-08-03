@@ -4,12 +4,13 @@ import os
 from functools import reduce
 import shutil
 
-from tensorboard_logger import configure, log_value
+from tensorboardX import SummaryWriter
 import numpy as np
 import torch
 import torch.nn as nn
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+summary_writer = SummaryWriter()
 
 class Evaluator(object):
     """docstring for Evaluate."""
@@ -97,7 +98,7 @@ class Evaluator(object):
                 correct += pred.eq(labels.view_as(pred)).sum().item()
 
             self.eval_loss /= len(self.data.dataset)
-            log_value('eval_loss', self.eval_loss)
+            summary_writer.add_scalar('eval_loss', self.eval_loss)
 
             print('\nEval Set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(
                 self.eval_loss, correct, len(self.data.dataset),
