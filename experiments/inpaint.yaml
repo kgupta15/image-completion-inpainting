@@ -5,7 +5,10 @@ train:
   display: 1
   gpu: 1
   hyperparameters:
-    lr: 0.001
+    cn_lr: 0.001
+    ld_lr: 0.001
+    gd_lr: 0.001
+    cl_lr: 0.001
     # turn value to zero to turn off learning rate decay
     lr_decay: 0.5
     # do not turn this to zero
@@ -14,7 +17,7 @@ train:
     momentum: 1
     weight_decay: 1
   data:
-    num_classes: 10
+    train_size: 10
     batch_size: 200
     valid_size: 0.1
     random_seed: 0.4
@@ -24,6 +27,8 @@ train:
     workers: 1
     augment: False
     show_sample: True
+    root: "/home/kapil/Documents/DeepLearning/image-completion-inpainting/data/input"
+    celeb: "/home/kapil/Documents/DeepLearning/image-completion-inpainting/data/celebA"
   logs: 
     loc: './logs'
     log_interval: 10
@@ -32,6 +37,6 @@ train:
     dist_backend: tcp
     dist_url: 'tcp://192.168.19.162:10443'
   checkpoints:
-    loc: '/home/kapil/Documents/PersonalProjects/DeepLearning/Avatar-Creation/inpainting/image-completion-inpainting/checkpoints'
+    loc: './checkpoints'
     ckpt_fname: 'checkpoint.pth.tar'
     best_ckpt_fname: 'best_checkpoint.pth.tar'
