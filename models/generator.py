@@ -126,24 +126,24 @@ class DilatedCompletionNetwork(nn.Module):
         self.sig_op = nn.Sigmoid()
         
         # 64 channels
-        conv1 = nn.Conv2d(in_channels=4, out_channels=64, kernel_size=(5,5), stride=(1,1), dilation=1, bias=False)
+        self.conv1 = nn.Conv2d(in_channels=4, out_channels=64, kernel_size=(5,5), stride=(1,1), dilation=1, bias=False)
         self.bn1 = nn.BatchNorm2d(64)
 
         # 128 channels
-        conv2 = nn.Conv2d(in_channels=64, out_channels=128, kernel_size=(3,3), stride=(2,2), dilation=1, bias=False)
-        conv3 = nn.Conv2d(in_channels=128, out_channels=128, kernel_size=(3,3), stride=(1,1), dilation=1, bias=False)
+        self.conv2 = nn.Conv2d(in_channels=64, out_channels=128, kernel_size=(3,3), stride=(2,2), dilation=1, bias=False)
+        self.conv3 = nn.Conv2d(in_channels=128, out_channels=128, kernel_size=(3,3), stride=(1,1), dilation=1, bias=False)
         self.bn2 = nn.BatchNorm2d(128)
 
         # 256 channels
-        conv4 = nn.Conv2d(in_channels=128, out_channels=256, kernel_size=(3,3), stride=(2,2), dilation=1, bias=False)
-        conv5 = nn.Conv2d(in_channels=256, out_channels=256, kernel_size=(3,3), stride=(1,1), dilation=1, bias=False)
-        conv6 = nn.Conv2d(in_channels=256, out_channels=256, kernel_size=(3,3), stride=(1,1), dilation=1, bias=False)
-        conv7 = nn.Conv2d(in_channels=256, out_channels=256, kernel_size=(3,3), stride=(1,1), dilation=2, bias=False)
-        conv8 = nn.Conv2d(in_channels=256, out_channels=256, kernel_size=(3,3), stride=(1,1), dilation=4, bias=False)
-        conv9 = nn.Conv2d(in_channels=256, out_channels=256, kernel_size=(3,3), stride=(1,1), dilation=8, bias=False)
-        conv10 = nn.Conv2d(in_channels=256, out_channels=256, kernel_size=(3,3), stride=(1,1), dilation=16, bias=False)
-        conv11 = nn.Conv2d(in_channels=256, out_channels=256, kernel_size=(3,3), stride=(1,1), dilation=1, bias=False)
-        conv12 = nn.Conv2d(in_channels=256, out_channels=256, kernel_size=(3,3), stride=(1,1), dilation=1, bias=False)
+        self.conv4 = nn.Conv2d(in_channels=128, out_channels=256, kernel_size=(3,3), stride=(2,2), dilation=1, bias=False)
+        self.conv5 = nn.Conv2d(in_channels=256, out_channels=256, kernel_size=(3,3), stride=(1,1), dilation=1, bias=False)
+        self.conv6 = nn.Conv2d(in_channels=256, out_channels=256, kernel_size=(3,3), stride=(1,1), dilation=1, bias=False)
+        self.conv7 = nn.Conv2d(in_channels=256, out_channels=256, kernel_size=(3,3), stride=(1,1), dilation=2, bias=False)
+        self.conv8 = nn.Conv2d(in_channels=256, out_channels=256, kernel_size=(3,3), stride=(1,1), dilation=4, bias=False)
+        self.conv9 = nn.Conv2d(in_channels=256, out_channels=256, kernel_size=(3,3), stride=(1,1), dilation=8, bias=False)
+        self.conv10 = nn.Conv2d(in_channels=256, out_channels=256, kernel_size=(3,3), stride=(1,1), dilation=16, bias=False)
+        self.conv11 = nn.Conv2d(in_channels=256, out_channels=256, kernel_size=(3,3), stride=(1,1), dilation=1, bias=False)
+        self.conv12 = nn.Conv2d(in_channels=256, out_channels=256, kernel_size=(3,3), stride=(1,1), dilation=1, bias=False)
         self.bn3 = nn.BatchNorm2d(256)
 
         # 128 channels
@@ -191,7 +191,9 @@ class DilatedCompletionNetwork(nn.Module):
         out = self.conv9(out)
         out = self.bn3(out)
         out = self.relu_op(out)
+        print(out.shape)
         out = self.conv10(out)
+        print(out.shape)
         out = self.bn3(out)
         out = self.relu_op(out)
         out = self.conv11(out)
